@@ -75,7 +75,7 @@ namespace DbUp.Console {
 				dbup.DryRun(databaseVersion.Version, headVersion, workingDir, printAll, connectionString);
 			} else {
 				if (dbup.IsUpgradeRequired(databaseVersion.Version, workingDir)) {
-					if (dbup.PerformUpgrade(databaseVersion.Version, headVersion, workingDir, connectionString).Successful) {
+					if (dbup.PerformUpgrade(databaseVersion.Version, headVersion, workingDir, connectionString, printAll).Successful) {
 						// Set the new database version
 						databaseVersion.Version = headVersion;
 						dbup.Log.WriteInformation("Database updated to {0}", headVersion);

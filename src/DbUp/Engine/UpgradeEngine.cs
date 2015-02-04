@@ -45,7 +45,7 @@ namespace DbUp.Engine {
 				GetScriptsToExecuteInsideOperation(workingDir, databaseVersionHash).ForEach(i => configuration.Log.WriteInformation("{0}", i.Name));
 			}
 
-			PerformUpgrade(databaseVersionHash, headVersion, workingDir, connectionString, true);
+			PerformUpgrade(databaseVersionHash, headVersion, workingDir, connectionString, printAll, true);
 		}
 
 		/// <summary>
@@ -72,7 +72,7 @@ namespace DbUp.Engine {
 		/// <summary>
 		/// Performs the database upgrade.
 		/// </summary>
-		public DatabaseUpgradeResult PerformUpgrade(string databaseVersionHash, string headVersion, string workingDir, string connectionString, bool dryRun = false) {
+		public DatabaseUpgradeResult PerformUpgrade(string databaseVersionHash, string headVersion, string workingDir, string connectionString, bool printAll = false, bool dryRun = false) {
 			var executed = new List<SqlScript>();
 			try {
 				using (configuration.ConnectionManager.OperationStarting(configuration.Log, executed)) {
@@ -97,7 +97,11 @@ namespace DbUp.Engine {
 
 					// If it's a dry run rollback the transaction at the end so nothing is committed to the database
 					combinedContents.AppendFormat("\r\n{0} TRANSACTION\r\nGO\r\n", dryRun ? "ROLLBACK" : "COMMIT");
-
+					if (!dryRun && printAll) {
+						configuration.Log.WriteInformation("--------------------------------------------------------------------------------");
+						configuration.Log.WriteInformation(combinedContents.ToString());
+						configuration.Log.WriteInformation("--------------------------------------------------------------------------------");
+					}
 					SqlScript combinedScript = new SqlScript(headVersion + ".sql", combinedContents.ToString());
 					try {
 						using (SqlConnection conn = new SqlConnection(connectionString)) {
