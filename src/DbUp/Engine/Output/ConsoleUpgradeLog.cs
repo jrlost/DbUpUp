@@ -34,13 +34,21 @@ namespace DbUp.Engine.Output {
 
 		private static void Write(ConsoleColor color, string format, object[] args) {
 			Console.ForegroundColor = color;
-			Console.WriteLine(format, args);
+			if (args.Length > 0) { 
+				Console.WriteLine(format, args);
+			} else {
+				Console.WriteLine(format);
+			}
 			Console.ResetColor();
 		}
 
 		private static void Error(ConsoleColor color, string format, object[] args) {
 			Console.ForegroundColor = color;
-			Console.Error.WriteLine(format, args);
+			if (args.Length > 0) { 
+				Console.Error.WriteLine(format, args);
+			} else {
+				Console.Error.WriteLine(format);
+			}
 			Console.ResetColor();
 		}
 	}
