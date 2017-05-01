@@ -48,6 +48,8 @@ namespace DbUp.Engine {
 			git.StartInfo = gitStartInfo;
 			git.Start();
 			string gitOutput = git.StandardOutput.ReadToEnd();
+			gitOutput += git.StandardError.ReadToEnd();
+
 			git.WaitForExit();
 
 			return gitOutput;
@@ -57,6 +59,7 @@ namespace DbUp.Engine {
 		/// Update the local repository with the lastest upstream changes
 		/// </summary>
 		public void UpdateLocalRepo() {
+			PullChanges();
 			RemoteUpdate();
 			CheckoutBranch();
 		}
@@ -65,6 +68,7 @@ namespace DbUp.Engine {
 		/// Make sure the local repository is on the correct branch. Assumes master will be used.
 		/// </summary>
 		private void CheckoutBranch() {
+			Console.WriteLine("Checkout");
 			// Checkout the desired branch
 			Console.WriteLine(ExecuteCommand("checkout " + branch));
 			// Update everything to match the remote branch exactly including removing untracked files if there are any
@@ -75,6 +79,7 @@ namespace DbUp.Engine {
 		/// Get the latest updates from the remote
 		/// </summary>
 		private void RemoteUpdate() {
+			Console.WriteLine("Remote Update");
 			Console.WriteLine(ExecuteCommand("remote update " + remote));
 		}
 
@@ -82,6 +87,7 @@ namespace DbUp.Engine {
 		/// Pull the remote updates into the local repository (only from origin not upstream)
 		/// </summary>
 		private void PullChanges() {
+			Console.WriteLine("Pull");
 			Console.WriteLine(ExecuteCommand("pull " + remote));
 		}
 

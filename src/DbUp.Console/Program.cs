@@ -72,10 +72,10 @@ namespace DbUp.Console {
 			LogRunDetails(databaseVersion.Version, headVersion, connectionString, workingDir, dbup.Log);
 
 			if (dryrun) {
-				dbup.DryRun(databaseVersion.Version, headVersion, workingDir, printAll, connectionString);
+				dbup.DryRun(databaseVersion.Version, headVersion, workingDir, printAll, connectionString, aGit);
 			} else {
-				if (dbup.IsUpgradeRequired(databaseVersion.Version, workingDir)) {
-					if (dbup.PerformUpgrade(databaseVersion.Version, headVersion, workingDir, connectionString, printAll).Successful) {
+				if (dbup.IsUpgradeRequired(databaseVersion.Version, workingDir, aGit)) {
+					if (dbup.PerformUpgrade(databaseVersion.Version, headVersion, workingDir, connectionString, aGit, printAll).Successful) {
 						// Set the new database version
 						databaseVersion.Version = headVersion;
 						dbup.Log.WriteInformation("Database updated to {0}", headVersion);

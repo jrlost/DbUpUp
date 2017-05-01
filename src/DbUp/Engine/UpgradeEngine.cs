@@ -1,12 +1,12 @@
 ﻿using DbUp.Builder;
 using DbUp.Engine.Output;
-using Microsoft.SqlServer.Management.Common;
-using Microsoft.SqlServer.Management.Smo;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
+using Microsoft.SqlServer.Management.Smo;
+using Microsoft.SqlServer.Management.Common;
 
 namespace DbUp.Engine {
 	/// <summary>
@@ -28,8 +28,8 @@ namespace DbUp.Engine {
 		/// <summary>
 		/// Determines whether the database is out of date and can be upgraded.
 		/// </summary>
-		public bool IsUpgradeRequired(string databaseVersionHash, string workingDir) {
-			return GetScriptsToExecuteInsideOperation(workingDir, databaseVersionHash).Count() != 0;
+		public bool IsUpgradeRequired(string databaseVersionHash, string workingDir, Git aGit) {
+			return GetScriptsToExecuteInsideOperation(workingDir, databaseVersionHash, aGit).Count() != 0;
 		}
 
 		/// <summary>
@@ -38,14 +38,14 @@ namespace DbUp.Engine {
 		/// <param name="databaseVersionHash">The most recent database version</param>
 		/// <param name="workingDir">The local clone of the migrations repository</param>
 		/// <param name="printAll">Print the contents of each of the scripts that will be run</param>
-		public void DryRun(string databaseVersionHash, string headVersion, string workingDir, bool printAll, string connectionString) {
+		public void DryRun(string databaseVersionHash, string headVersion, string workingDir, bool printAll, string connectionString, Git aGit) {
 			if (printAll) {
-				GetScriptsToExecuteInsideOperation(workingDir, databaseVersionHash).ForEach(i => configuration.Log.WriteInformation("--{0}\r\n{1}\r\n\r\n", i.Name, i.Contents));
+				GetScriptsToExecuteInsideOperation(workingDir, databaseVersionHash, aGit).ForEach(i => configuration.Log.WriteInformation("--{0}\r\n{1}\r\n\r\n", i.Name, i.Contents));
 			} else {
-				GetScriptsToExecuteInsideOperation(workingDir, databaseVersionHash).ForEach(i => configuration.Log.WriteInformation("{0}", i.Name));
+				GetScriptsToExecuteInsideOperation(workingDir, databaseVersionHash, aGit).ForEach(i => configuration.Log.WriteInformation("{0}", i.Name));
 			}
 
-			PerformUpgrade(databaseVersionHash, headVersion, workingDir, connectionString, printAll, true);
+			PerformUpgrade(databaseVersionHash, headVersion, workingDir, connectionString, aGit, printAll, true);
 		}
 
 		/// <summary>
@@ -72,13 +72,13 @@ namespace DbUp.Engine {
 		/// <summary>
 		/// Performs the database upgrade.
 		/// </summary>
-		public DatabaseUpgradeResult PerformUpgrade(string databaseVersionHash, string headVersion, string workingDir, string connectionString, bool printAll = false, bool dryRun = false) {
+		public DatabaseUpgradeResult PerformUpgrade(string databaseVersionHash, string headVersion, string workingDir, string connectionString, Git aGit, bool printAll = false, bool dryRun = false) {
 			var executed = new List<SqlScript>();
 			try {
 				using (configuration.ConnectionManager.OperationStarting(configuration.Log, executed)) {
 					configuration.Log.WriteInformation("Beginning database upgrade");
 
-					var scriptsToExecute = GetScriptsToExecuteInsideOperation(workingDir, databaseVersionHash);
+					var scriptsToExecute = GetScriptsToExecuteInsideOperation(workingDir, databaseVersionHash, aGit);
 
 					if (scriptsToExecute.Count == 0) {
 						configuration.Log.WriteInformation("No new scripts need to be executed - completing.");
@@ -107,8 +107,9 @@ namespace DbUp.Engine {
 						using (SqlConnection conn = new SqlConnection(connectionString)) {
 							Server db = new Server(new ServerConnection(conn));
 							db.ConnectionContext.ExecuteNonQuery(combinedContents.ToString());
+
+							executed.Add(combinedScript);
 						}
-						executed.Add(combinedScript);
 					} catch (Exception ex) {
 						// Just throw the error for now until we know whether the rollback will work
 						throw ex;
@@ -128,11 +129,9 @@ namespace DbUp.Engine {
 		/// <param name="databaseVersionHash">The version hash the database was last upgraded to</param>
 		/// <param name="repoVersionHash">The version hash the database will be upgraded to</param>
 		/// <returns>List of SQL scripts including their names and contents</returns>
-		private List<SqlScript> GetScriptsToExecuteInsideOperation(string workingDir, string databaseVersionHash, string repoVersionHash = "HEAD") {
+		private List<SqlScript> GetScriptsToExecuteInsideOperation(string workingDir, string databaseVersionHash, Git aGit, string repoVersionHash = "HEAD") {
 			// Git repo must already be cloned into workspace
 			try {
-				var aGit = new Git(workingDir, branch);
-				aGit.UpdateLocalRepo();
 				return aGit.GetScripts(databaseVersionHash, repoVersionHash).Where(s => !String.IsNullOrEmpty(s)).Select(s => SqlScript.FromFile(s)).ToList();
 			} catch (Exception ex) {
 				configuration.Log.WriteError("Git commands failed to run: \r\n{0}", ex.ToString());
